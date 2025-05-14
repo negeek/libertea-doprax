@@ -1,0 +1,54 @@
+- name: Install Libertea VPN Panel
+  hosts: all
+  become: yes
+  vars:
+    panel_domain: "{{ panel_domain }}"   
+    admin_password: "{{ admin_password }}"
+
+  tasks:
+    - name: Install required system packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - git
+        state: present
+        update_cache: yes
+
+    - name: Add Docker’s official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        state: present
+
+    - name: Install Docker Engine
+      apt:
+        name: docker-ce
+        update_cache: yes
+        state: latest
+
+    - name: Download Libertea bootstrap.sh
+      get_url:
+        url: https://raw.githubusercontent.com/VZiChoushaDui/Libertea/master/bootstrap.sh
+        dest: /tmp/bootstrap.sh
+        mode: '0755'
+
+    - name: Run Libertea install script with automated inputs
+      expect:
+        command: bash /tmp/bootstrap.sh install
+        responses:
+          'Please enter your panel domain name.*': "{{ panel_domain }}"
+          'Please enter a password for admin user.*': "{{ admin_password }}"
+        timeout: null
+      register: install_output
+
+    - name: Show the output of the install process
+      debug:
+        var: install_output.stdout
